@@ -58,6 +58,8 @@ void setup() {
   Collections.shuffle(destinations); // randomize the order of the button; don't change this.
 }
 
+
+
 void draw() {
 
   background(40); //background is dark grey
@@ -77,24 +79,6 @@ void draw() {
     return;
   }
 
-  Destination current = destinations.get(trialIndex);
-
-  //===========DRAW X/Y FASTEST PATH GUIDES=================
-  strokeWeight(2f);
-
-  // horizontal path first: from logo center across to target x at current logo y
-  stroke(255, 255, 0, 170);
-  line(logoX, logoY, current.x, logoY);
-
-  // vertical path second: from that point up/down to target y
-  stroke(0, 255, 255, 170);
-  line(current.x, logoY, current.x, current.y);
-
-  // optional corner marker showing the turn in the L-shaped path
-  noStroke();
-  fill(255, 255, 255, 180);
-  ellipse(current.x, logoY, 8, 8);
-
   //===========DRAW DESTINATION SQUARES=================
   for (int i=trialIndex; i<trialCount; i++) // reduces over time
   {
@@ -102,7 +86,7 @@ void draw() {
     Destination d = destinations.get(i); //get destination trial
     translate(d.x, d.y); //center the drawing coordinates to the center of the destination trial
     
-    rotate(radians(d.rotation)); //rotate around the origin of the destination trial
+    rotate(radians(d.rotation)); //rotate around the origin of the Ddestination trial
     noFill();
     strokeWeight(3f);
     if (trialIndex==i)
@@ -115,7 +99,7 @@ void draw() {
 
   //===========DRAW LOGO SQUARE=================
   pushMatrix();
-  translate(logoX, logoY); //translate draw center to the center of the logo square
+  translate(logoX, logoY); //translate draw center to the center oft he logo square
   rotate(radians(logoRotation)); //rotate using the logo square as the origin
   noStroke();
   fill(60, 60, 192, 192);
@@ -167,6 +151,31 @@ void scaffoldControlLogic()
   text("down", width/2, height-inchToPix(.4f));
   if (mousePressed && dist(width/2, height, mouseX, mouseY)<inchToPix(.8f))
     logoY+=inchToPix(.02f);
+
+  //new diagonal movement buttons
+  text("UL", inchToPix(1.2f), inchToPix(1.2f));
+  if (mousePressed && dist(inchToPix(1.2f), inchToPix(1.2f), mouseX, mouseY)<inchToPix(.5f)) {
+    logoX-=inchToPix(.02f);
+    logoY-=inchToPix(.02f);
+  }
+
+  text("UR", width-inchToPix(1.2f), inchToPix(1.2f));
+  if (mousePressed && dist(width-inchToPix(1.2f), inchToPix(1.2f), mouseX, mouseY)<inchToPix(.5f)) {
+    logoX+=inchToPix(.02f);
+    logoY-=inchToPix(.02f);
+  }
+
+  text("DL", inchToPix(1.2f), height-inchToPix(1.2f));
+  if (mousePressed && dist(inchToPix(1.2f), height-inchToPix(1.2f), mouseX, mouseY)<inchToPix(.5f)) {
+    logoX-=inchToPix(.02f);
+    logoY+=inchToPix(.02f);
+  }
+
+  text("DR", width-inchToPix(1.2f), height-inchToPix(1.2f));
+  if (mousePressed && dist(width-inchToPix(1.2f), height-inchToPix(1.2f), mouseX, mouseY)<inchToPix(.5f)) {
+    logoX+=inchToPix(.02f);
+    logoY+=inchToPix(.02f);
+  }
 }
 
 void mousePressed()
