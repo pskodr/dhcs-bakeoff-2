@@ -22,6 +22,18 @@ float logoY = 500;
 float logoZ = 50f;
 float logoRotation = 0;
 
+// added interaction state
+boolean draggingLogo = false;
+boolean draggingRotateHandle = false;
+boolean draggingResizeHandle = false;
+
+float dragOffsetX = 0;
+float dragOffsetY = 0;
+float rotateStartMouseAngle = 0;
+float rotateStartLogoRotation = 0;
+float resizeStartLocalExtent = 0;
+float resizeStartLogoZ = 0;
+
 private class Destination
 {
   float x = 0;
@@ -106,76 +118,47 @@ void draw() {
   rect(0, 0, logoZ, logoZ);
   popMatrix();
 
-  //===========DRAW EXAMPLE CONTROLS=================
+  //===========DRAW NEW CONTROLS=================
   fill(255);
-  scaffoldControlLogic(); //you are going to want to replace this!
+  scaffoldControlLogic();
   text("Trial " + (trialIndex+1) + " of " +trialCount, width/2, inchToPix(.8f));
 }
 
-//my example design for control, which is terrible
+//new control design:
+//-drag square itself to move
+//-drag rotation handle to rotate
+//-drag resize handle to scale
 void scaffoldControlLogic()
 {
-  //upper left corner, rotate counterclockwise
-  text("CCW", inchToPix(.4f), inchToPix(.4f));
-  if (mousePressed && dist(0, 0, mouseX, mouseY)<inchToPix(.8f))
-    logoRotation--;
+  float handleRadius = inchToPix(.18f);
 
-  //upper right corner, rotate clockwise
-  text("CW", width-inchToPix(.4f), inchToPix(.4f));
-  if (mousePressed && dist(width, 0, mouseX, mouseY)<inchToPix(.8f))
-    logoRotation++;
+  PVector rotateHandle = getRotateHandlePosition();
+  PVector resizeHandle = getResizeHandlePosition();
 
-  //lower left corner, decrease Z
-  text("-", inchToPix(.4f), height-inchToPix(.4f));
-  if (mousePressed && dist(0, height, mouseX, mouseY)<inchToPix(.8f))
-    logoZ = constrain(logoZ-inchToPix(.02f), .01, inchToPix(4f)); //leave min and max alone!
+  // connector line to rotation handle
+  stroke(220);
+  strokeWeight(2f);
+  line(logoX, logoY - logoZ/2, rotateHandle.x, rotateHandle.y);
 
-  //lower right corner, increase Z
-  text("+", width-inchToPix(.4f), height-inchToPix(.4f));
-  if (mousePressed && dist(width, height, mouseX, mouseY)<inchToPix(.8f))
-    logoZ = constrain(logoZ+inchToPix(.02f), .01, inchToPix(4f)); //leave min and max alone! 
+  // rotation handle
+  noStroke();
+  fill(255, 180, 0);
+  ellipse(rotateHandle.x, rotateHandle.y, handleRadius*2, handleRadius*2);
+  fill(0);
+  textSize(inchToPix(.18f));
+  text("R", rotateHandle.x, rotateHandle.y + 1);
 
-  //left middle, move left
-  text("left", inchToPix(.4f), height/2);
-  if (mousePressed && dist(0, height/2, mouseX, mouseY)<inchToPix(.8f))
-    logoX-=inchToPix(.02f);
+  // resize handle
+  noStroke();
+  fill(0, 220, 120);
+  ellipse(resizeHandle.x, resizeHandle.y, handleRadius*2, handleRadius*2);
+  fill(0);
+  text("Z", resizeHandle.x, resizeHandle.y + 1);
 
-  text("right", width-inchToPix(.4f), height/2);
-  if (mousePressed && dist(width, height/2, mouseX, mouseY)<inchToPix(.8f))
-    logoX+=inchToPix(.02f);
-
-  text("up", width/2, inchToPix(.4f));
-  if (mousePressed && dist(width/2, 0, mouseX, mouseY)<inchToPix(.8f))
-    logoY-=inchToPix(.02f);
-
-  text("down", width/2, height-inchToPix(.4f));
-  if (mousePressed && dist(width/2, height, mouseX, mouseY)<inchToPix(.8f))
-    logoY+=inchToPix(.02f);
-
-  //new diagonal movement buttons
-  text("UL", inchToPix(1.2f), inchToPix(1.2f));
-  if (mousePressed && dist(inchToPix(1.2f), inchToPix(1.2f), mouseX, mouseY)<inchToPix(.5f)) {
-    logoX-=inchToPix(.02f);
-    logoY-=inchToPix(.02f);
-  }
-
-  text("UR", width-inchToPix(1.2f), inchToPix(1.2f));
-  if (mousePressed && dist(width-inchToPix(1.2f), inchToPix(1.2f), mouseX, mouseY)<inchToPix(.5f)) {
-    logoX+=inchToPix(.02f);
-    logoY-=inchToPix(.02f);
-  }
-
-  text("DL", inchToPix(1.2f), height-inchToPix(1.2f));
-  if (mousePressed && dist(inchToPix(1.2f), height-inchToPix(1.2f), mouseX, mouseY)<inchToPix(.5f)) {
-    logoX-=inchToPix(.02f);
-    logoY+=inchToPix(.02f);
-  }
-
-  text("DR", width-inchToPix(1.2f), height-inchToPix(1.2f));
-  if (mousePressed && dist(width-inchToPix(1.2f), height-inchToPix(1.2f), mouseX, mouseY)<inchToPix(.5f)) {
-    logoX+=inchToPix(.02f);
-    logoY+=inchToPix(.02f);
-  }
+  // small label
+  fill(255);
+  textSize(inchToPix(.2f));
+  text("Drag square = move   Drag R = rotate   Drag Z = resize", width/2, height - inchToPix(.35f));
 }
 
 void mousePressed()
@@ -185,10 +168,64 @@ void mousePressed()
     startTime = millis();
     println("time started!");
   }
+
+  float handleRadius = inchToPix(.18f);
+  PVector rotateHandle = getRotateHandlePosition();
+  PVector resizeHandle = getResizeHandlePosition();
+
+  if (dist(mouseX, mouseY, rotateHandle.x, rotateHandle.y) < handleRadius)
+  {
+    draggingRotateHandle = true;
+    rotateStartMouseAngle = degrees(atan2(mouseY - logoY, mouseX - logoX));
+    rotateStartLogoRotation = logoRotation;
+    return;
+  }
+
+  if (dist(mouseX, mouseY, resizeHandle.x, resizeHandle.y) < handleRadius)
+  {
+    draggingResizeHandle = true;
+    PVector local = screenToLogoLocal(mouseX, mouseY);
+    resizeStartLocalExtent = max(abs(local.x), abs(local.y));
+    resizeStartLogoZ = logoZ;
+    return;
+  }
+
+  if (pointInsideLogoSquare(mouseX, mouseY))
+  {
+    draggingLogo = true;
+    dragOffsetX = mouseX - logoX;
+    dragOffsetY = mouseY - logoY;
+    return;
+  }
+}
+
+void mouseDragged()
+{
+  if (draggingLogo)
+  {
+    logoX = mouseX - dragOffsetX;
+    logoY = mouseY - dragOffsetY;
+  }
+  else if (draggingRotateHandle)
+  {
+    float currentMouseAngle = degrees(atan2(mouseY - logoY, mouseX - logoX));
+    logoRotation = rotateStartLogoRotation + (currentMouseAngle - rotateStartMouseAngle);
+  }
+  else if (draggingResizeHandle)
+  {
+    PVector local = screenToLogoLocal(mouseX, mouseY);
+    float currentExtent = max(abs(local.x), abs(local.y));
+    float delta = currentExtent - resizeStartLocalExtent;
+    logoZ = constrain(resizeStartLogoZ + 2*delta, .01, inchToPix(4f)); //leave min and max alone!
+  }
 }
 
 void mouseReleased()
 {
+  draggingLogo = false;
+  draggingRotateHandle = false;
+  draggingResizeHandle = false;
+
   //check to see if user clicked middle of screen within 3 inches, which this code uses as a submit button
   if (dist(width/2, height/2, mouseX, mouseY)<inchToPix(3f))
   {
@@ -203,6 +240,43 @@ void mouseReleased()
       finishTime = millis();
     }
   }
+}
+
+// helper: convert screen point into square-local coordinates
+PVector screenToLogoLocal(float sx, float sy)
+{
+  float dx = sx - logoX;
+  float dy = sy - logoY;
+  float a = radians(-logoRotation);
+  float localX = dx*cos(a) - dy*sin(a);
+  float localY = dx*sin(a) + dy*cos(a);
+  return new PVector(localX, localY);
+}
+
+// helper: is pointer inside rotated square
+boolean pointInsideLogoSquare(float sx, float sy)
+{
+  PVector local = screenToLogoLocal(sx, sy);
+  return abs(local.x) <= logoZ/2 && abs(local.y) <= logoZ/2;
+}
+
+// helper: rotation handle position
+PVector getRotateHandlePosition()
+{
+  float offset = logoZ/2 + inchToPix(.45f);
+  float a = radians(logoRotation - 90);
+  return new PVector(logoX + cos(a)*offset, logoY + sin(a)*offset);
+}
+
+// helper: resize handle position (square corner)
+PVector getResizeHandlePosition()
+{
+  float localX = logoZ/2;
+  float localY = logoZ/2;
+  float a = radians(logoRotation);
+  float sx = logoX + localX*cos(a) - localY*sin(a);
+  float sy = logoY + localX*sin(a) + localY*cos(a);
+  return new PVector(sx, sy);
 }
 
 //probably shouldn't modify this, but email me if you want to for some good reason.
