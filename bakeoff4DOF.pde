@@ -77,6 +77,24 @@ void draw() {
     return;
   }
 
+  Destination current = destinations.get(trialIndex);
+
+  //===========DRAW X/Y FASTEST PATH GUIDES=================
+  strokeWeight(2f);
+
+  // horizontal path first: from logo center across to target x at current logo y
+  stroke(255, 255, 0, 170);
+  line(logoX, logoY, current.x, logoY);
+
+  // vertical path second: from that point up/down to target y
+  stroke(0, 255, 255, 170);
+  line(current.x, logoY, current.x, current.y);
+
+  // optional corner marker showing the turn in the L-shaped path
+  noStroke();
+  fill(255, 255, 255, 180);
+  ellipse(current.x, logoY, 8, 8);
+
   //===========DRAW DESTINATION SQUARES=================
   for (int i=trialIndex; i<trialCount; i++) // reduces over time
   {
@@ -92,45 +110,16 @@ void draw() {
     else
       stroke(128, 128, 128, 128); //set color to semi translucent
     rect(0, 0, d.z, d.z);
-
-    // center marker for destination square
-    if (trialIndex==i) {
-      stroke(255, 0, 0, 220);
-      strokeWeight(2f);
-      line(-8, 0, 8, 0);
-      line(0, -8, 0, 8);
-      noStroke();
-      fill(255, 0, 0, 220);
-      ellipse(0, 0, 6, 6);
-      noFill();
-    } else {
-      stroke(128, 128, 128, 90);
-      strokeWeight(1.5f);
-      line(-5, 0, 5, 0);
-      line(0, -5, 0, 5);
-      noFill();
-    }
-
     popMatrix();
   }
 
   //===========DRAW LOGO SQUARE=================
   pushMatrix();
-  translate(logoX, logoY); //translate draw center to the center oft he logo square
+  translate(logoX, logoY); //translate draw center to the center of the logo square
   rotate(radians(logoRotation)); //rotate using the logo square as the origin
   noStroke();
   fill(60, 60, 192, 192);
   rect(0, 0, logoZ, logoZ);
-
-  // center marker for user's square
-  stroke(255);
-  strokeWeight(2f);
-  line(-8, 0, 8, 0);
-  line(0, -8, 0, 8);
-  noStroke();
-  fill(255);
-  ellipse(0, 0, 6, 6);
-
   popMatrix();
 
   //===========DRAW EXAMPLE CONTROLS=================
