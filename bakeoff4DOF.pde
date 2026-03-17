@@ -58,8 +58,6 @@ void setup() {
   Collections.shuffle(destinations); // randomize the order of the button; don't change this.
 }
 
-
-
 void draw() {
 
   background(40); //background is dark grey
@@ -86,7 +84,7 @@ void draw() {
     Destination d = destinations.get(i); //get destination trial
     translate(d.x, d.y); //center the drawing coordinates to the center of the destination trial
     
-    rotate(radians(d.rotation)); //rotate around the origin of the Ddestination trial
+    rotate(radians(d.rotation)); //rotate around the origin of the destination trial
     noFill();
     strokeWeight(3f);
     if (trialIndex==i)
@@ -94,6 +92,25 @@ void draw() {
     else
       stroke(128, 128, 128, 128); //set color to semi translucent
     rect(0, 0, d.z, d.z);
+
+    // center marker for destination square
+    if (trialIndex==i) {
+      stroke(255, 0, 0, 220);
+      strokeWeight(2f);
+      line(-8, 0, 8, 0);
+      line(0, -8, 0, 8);
+      noStroke();
+      fill(255, 0, 0, 220);
+      ellipse(0, 0, 6, 6);
+      noFill();
+    } else {
+      stroke(128, 128, 128, 90);
+      strokeWeight(1.5f);
+      line(-5, 0, 5, 0);
+      line(0, -5, 0, 5);
+      noFill();
+    }
+
     popMatrix();
   }
 
@@ -104,6 +121,16 @@ void draw() {
   noStroke();
   fill(60, 60, 192, 192);
   rect(0, 0, logoZ, logoZ);
+
+  // center marker for user's square
+  stroke(255);
+  strokeWeight(2f);
+  line(-8, 0, 8, 0);
+  line(0, -8, 0, 8);
+  noStroke();
+  fill(255);
+  ellipse(0, 0, 6, 6);
+
   popMatrix();
 
   //===========DRAW EXAMPLE CONTROLS=================
@@ -183,10 +210,10 @@ void mouseReleased()
 //probably shouldn't modify this, but email me if you want to for some good reason.
 public boolean checkForSuccess()
 {
-  Destination d = destinations.get(trialIndex);	
+  Destination d = destinations.get(trialIndex);  
   boolean closeDist = dist(d.x, d.y, logoX, logoY)<inchToPix(.05f); //has to be within +-0.05"
   boolean closeRotation = calculateDifferenceBetweenAngles(d.rotation, logoRotation)<=5;
-  boolean closeZ = abs(d.z - logoZ)<inchToPix(.1f); //has to be within +-0.1"	
+  boolean closeZ = abs(d.z - logoZ)<inchToPix(.1f); //has to be within +-0.1"  
 
   println("Close Enough Distance: " + closeDist + " (logo X/Y = " + d.x + "/" + d.y + ", destination X/Y = " + logoX + "/" + logoY +")");
   println("Close Enough Rotation: " + closeRotation + " (rot dist="+calculateDifferenceBetweenAngles(d.rotation, logoRotation)+")");
