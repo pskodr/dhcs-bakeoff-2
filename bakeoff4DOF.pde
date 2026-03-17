@@ -112,45 +112,106 @@ void draw() {
   text("Trial " + (trialIndex+1) + " of " +trialCount, width/2, inchToPix(.8f));
 }
 
-//my example design for control, which is terrible
 void scaffoldControlLogic()
 {
-  //upper left corner, rotate counterclockwise
-  text("CCW", inchToPix(.4f), inchToPix(.4f));
-  if (mousePressed && dist(0, 0, mouseX, mouseY)<inchToPix(.8f))
-    logoRotation--;
+  float btnSize = inchToPix(.5f);
+  float spacing = inchToPix(.1f);
+  float startX = width - inchToPix(1.5f);
+  float startY = inchToPix(1.0f);
 
-  //upper right corner, rotate clockwise
-  text("CW", width-inchToPix(.4f), inchToPix(.4f));
-  if (mousePressed && dist(width, 0, mouseX, mouseY)<inchToPix(.8f))
+  // ===== BUTTONS =====
+  drawButton("↑", startX, startY);
+  if (mousePressed && overButton(startX, startY, btnSize))
+    logoY -= inchToPix(.02f);
+
+  drawButton("↓", startX, startY + btnSize + spacing);
+  if (mousePressed && overButton(startX, startY + btnSize + spacing, btnSize))
+    logoY += inchToPix(.02f);
+
+  drawButton("←", startX - btnSize - spacing, startY + btnSize/2);
+  if (mousePressed && overButton(startX - btnSize - spacing, startY + btnSize/2, btnSize))
+    logoX -= inchToPix(.02f);
+
+  drawButton("→", startX + btnSize + spacing, startY + btnSize/2);
+  if (mousePressed && overButton(startX + btnSize + spacing, startY + btnSize/2, btnSize))
+    logoX += inchToPix(.02f);
+
+  drawButton("+", startX, startY + 2*(btnSize + spacing));
+  if (mousePressed && overButton(startX, startY + 2*(btnSize + spacing), btnSize))
+    logoZ = constrain(logoZ+inchToPix(.02f), .01, inchToPix(4f));
+
+  drawButton("-", startX, startY + 3*(btnSize + spacing));
+  if (mousePressed && overButton(startX, startY + 3*(btnSize + spacing), btnSize))
+    logoZ = constrain(logoZ-inchToPix(.02f), .01, inchToPix(4f));
+
+  drawButton("CW", startX - btnSize - spacing, startY + 2*(btnSize + spacing));
+  if (mousePressed && overButton(startX - btnSize - spacing, startY + 2*(btnSize + spacing), btnSize))
     logoRotation++;
 
-  //lower left corner, decrease Z
-  text("-", inchToPix(.4f), height-inchToPix(.4f));
-  if (mousePressed && dist(0, height, mouseX, mouseY)<inchToPix(.8f))
-    logoZ = constrain(logoZ-inchToPix(.02f), .01, inchToPix(4f)); //leave min and max alone!
+  drawButton("CCW", startX + btnSize + spacing, startY + 2*(btnSize + spacing));
+  if (mousePressed && overButton(startX + btnSize + spacing, startY + 2*(btnSize + spacing), btnSize))
+    logoRotation--;
 
-  //lower right corner, increase Z
-  text("+", width-inchToPix(.4f), height-inchToPix(.4f));
-  if (mousePressed && dist(width, height, mouseX, mouseY)<inchToPix(.8f))
-    logoZ = constrain(logoZ+inchToPix(.02f), .01, inchToPix(4f)); //leave min and max alone! 
+  // ===== TARGET INFO =====
+  Destination d = destinations.get(trialIndex);
 
-  //left middle, move left
-  text("left", inchToPix(.4f), height/2);
-  if (mousePressed && dist(0, height/2, mouseX, mouseY)<inchToPix(.8f))
-    logoX-=inchToPix(.02f);
+  float dx = d.x - logoX;
+  float dy = d.y - logoY;
+  float dz = d.z - logoZ;
+  float rotDiff = (float)calculateDifferenceBetweenAngles(d.rotation, logoRotation);
 
-  text("right", width-inchToPix(.4f), height/2);
-  if (mousePressed && dist(width, height/2, mouseX, mouseY)<inchToPix(.8f))
-    logoX+=inchToPix(.02f);
+  boolean closeDist = dist(d.x, d.y, logoX, logoY) < inchToPix(.05f);
+  boolean closeZ = abs(dz) < inchToPix(.1f);
+  boolean closeRot = rotDiff <= 5;
 
-  text("up", width/2, inchToPix(.4f));
-  if (mousePressed && dist(width/2, 0, mouseX, mouseY)<inchToPix(.8f))
-    logoY-=inchToPix(.02f);
+  float textX = width - inchToPix(.2f);
+  float textY = startY + 5*(btnSize);
 
-  text("down", width/2, height-inchToPix(.4f));
-  if (mousePressed && dist(width/2, height, mouseX, mouseY)<inchToPix(.8f))
-    logoY+=inchToPix(.02f);
+  textAlign(RIGHT);
+
+  // ===== DIRECTION (POSITION) =====
+  fill(255);
+  String dirX = abs(dx) > inchToPix(.01f) ? (dx > 0 ? "→" : "←") : "";
+  String dirY = abs(dy) > inchToPix(.01f) ? (dy > 0 ? "↓" : "↑") : "";
+  text("Move: " + dirX + " " + dirY, textX, textY);
+
+  // ===== SIZE INSTRUCTION =====
+  textY += inchToPix(.3f);
+  String sizeInstr = "";
+  if (!closeZ)
+    sizeInstr = dz > 0 ? "Increase Size (+)" : "Decrease Size (-)";
+  else
+    sizeInstr = "Size OK";
+
+  text(sizeInstr, textX, textY);
+
+  // ===== ROTATION INSTRUCTION =====
+  textY += inchToPix(.3f);
+  String rotInstr = "";
+  if (!closeRot)
+  {
+    float diff = d.rotation - logoRotation;
+    diff = (diff + 360) % 360;
+    rotInstr = (diff > 180) ? "Rotate CCW" : "Rotate CW";
+  }
+  else
+    rotInstr = "Rotation OK";
+
+  text(rotInstr, textX, textY);
+
+  // ===== STATUS FEEDBACK =====
+  textY += inchToPix(.4f);
+
+  fill(closeDist ? color(0,255,0) : 255);
+  text("COOR CLOSE", textX, textY);
+
+  textY += inchToPix(.3f);
+  fill(closeZ ? color(0,255,0) : 255);
+  text("SIZE CLOSE", textX, textY);
+
+  textY += inchToPix(.3f);
+  fill(closeRot ? color(0,255,0) : 255);
+  text("ROT CLOSE", textX, textY);
 }
 
 void mousePressed()
@@ -211,4 +272,22 @@ double calculateDifferenceBetweenAngles(float a1, float a2)
 float inchToPix(float inch)
 {
   return inch*screenPPI;
+}
+
+void drawButton(String label, float x, float y)
+{
+  float size = inchToPix(.5f);
+
+  fill(100);
+  rect(x, y, size, size);
+
+  fill(255);
+  textAlign(CENTER, CENTER);
+  text(label, x, y);
+}
+
+boolean overButton(float x, float y, float size)
+{
+  return mouseX > x - size/2 && mouseX < x + size/2 &&
+         mouseY > y - size/2 && mouseY < y + size/2;
 }
