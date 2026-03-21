@@ -70,8 +70,6 @@ void setup() {
   Collections.shuffle(destinations); // randomize the order of the button; don't change this.
 }
 
-
-
 void draw() {
 
   background(40); //background is dark grey
@@ -91,6 +89,14 @@ void draw() {
     return;
   }
 
+  Destination currentTarget = destinations.get(trialIndex);
+
+  // silent success check for live color feedback
+  boolean isSuccess =
+    dist(currentTarget.x, currentTarget.y, logoX, logoY) < inchToPix(.05f) &&
+    calculateDifferenceBetweenAngles(currentTarget.rotation, logoRotation) <= 5 &&
+    abs(currentTarget.z - logoZ) < inchToPix(.1f);
+
   //===========DRAW DESTINATION SQUARES=================
   for (int i=trialIndex; i<trialCount; i++) // reduces over time
   {
@@ -98,7 +104,7 @@ void draw() {
     Destination d = destinations.get(i); //get destination trial
     translate(d.x, d.y); //center the drawing coordinates to the center of the destination trial
     
-    rotate(radians(d.rotation)); //rotate around the origin of the Ddestination trial
+    rotate(radians(d.rotation)); //rotate around the origin of the destination trial
     noFill();
     strokeWeight(3f);
     if (trialIndex==i)
@@ -106,16 +112,50 @@ void draw() {
     else
       stroke(128, 128, 128, 128); //set color to semi translucent
     rect(0, 0, d.z, d.z);
+
+    // center marker for destination square
+    if (trialIndex==i) {
+      stroke(255, 0, 0, 220);
+      strokeWeight(2f);
+      line(-8, 0, 8, 0);
+      line(0, -8, 0, 8);
+      noStroke();
+      fill(255, 0, 0, 220);
+      ellipse(0, 0, 6, 6);
+      noFill();
+    } else {
+      stroke(128, 128, 128, 90);
+      strokeWeight(1.5f);
+      line(-5, 0, 5, 0);
+      line(0, -5, 0, 5);
+      noFill();
+    }
+
     popMatrix();
   }
 
   //===========DRAW LOGO SQUARE=================
   pushMatrix();
-  translate(logoX, logoY); //translate draw center to the center oft he logo square
+  translate(logoX, logoY); //translate draw center to the center of the logo square
   rotate(radians(logoRotation)); //rotate using the logo square as the origin
   noStroke();
-  fill(60, 60, 192, 192);
+
+  if (isSuccess)
+    fill(0, 200, 0, 192); // green when correct
+  else
+    fill(60, 60, 192, 192); // original blue when not correct
+
   rect(0, 0, logoZ, logoZ);
+
+  // center marker for user's square
+  stroke(255);
+  strokeWeight(2f);
+  line(-8, 0, 8, 0);
+  line(0, -8, 0, 8);
+  noStroke();
+  fill(255);
+  ellipse(0, 0, 6, 6);
+
   popMatrix();
 
   //===========DRAW NEW CONTROLS=================
@@ -128,6 +168,7 @@ void draw() {
 //-drag square itself to move
 //-drag rotation handle to rotate
 //-drag resize handle to scale
+//-confirmation button to advance
 void scaffoldControlLogic()
 {
   float handleRadius = inchToPix(.18f);
@@ -155,10 +196,25 @@ void scaffoldControlLogic()
   fill(0);
   text("Z", resizeHandle.x, resizeHandle.y + 1);
 
-  // small label
+  // confirmation button
+  float confirmW = inchToPix(1.4f);
+  float confirmH = inchToPix(.6f);
+  float confirmX = width/2;
+  float confirmY = height - inchToPix(.75f);
+
+  rectMode(CENTER);
+  noStroke();
+  fill(0, 180, 0);
+  rect(confirmX, confirmY, confirmW, confirmH, 10);
+
   fill(255);
   textSize(inchToPix(.2f));
-  text("Drag square = move   Drag R = rotate   Drag Z = resize", width/2, height - inchToPix(.35f));
+  text("CONFIRM", confirmX, confirmY + 4);
+
+  // instruction label
+  fill(255);
+  textSize(inchToPix(.18f));
+  text("Drag square = move   Drag R = rotate   Drag Z = resize", width/2, height - inchToPix(1.25f));
 }
 
 void mousePressed()
@@ -226,8 +282,13 @@ void mouseReleased()
   draggingRotateHandle = false;
   draggingResizeHandle = false;
 
-  //check to see if user clicked middle of screen within 3 inches, which this code uses as a submit button
-  if (dist(width/2, height/2, mouseX, mouseY)<inchToPix(3f))
+  // confirmation button click
+  float confirmW = inchToPix(1.4f);
+  float confirmH = inchToPix(.6f);
+  float confirmX = width/2;
+  float confirmY = height - inchToPix(.75f);
+
+  if (abs(mouseX - confirmX) < confirmW/2 && abs(mouseY - confirmY) < confirmH/2)
   {
     if (userDone==false && !checkForSuccess())
       errorCount++;
