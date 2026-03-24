@@ -22,7 +22,7 @@ float logoY = 500;
 float logoZ = 50f;
 float logoRotation = 0;
 
-// added interaction state
+// interaction state for drag / rotate / resize
 boolean draggingLogo = false;
 boolean draggingRotateHandle = false;
 boolean draggingResizeHandle = false;
@@ -48,7 +48,7 @@ void setup() {
   size(1000, 800);  
   rectMode(CENTER);
   textFont(createFont("Arial", inchToPix(.3f))); //sets the font to Arial that is 0.3" tall
-  textAlign(CENTER);
+  textAlign(CENTER, CENTER);
   rectMode(CENTER); //draw rectangles not from upper left, but from the center outwards
   
   //don't change this! 
@@ -89,13 +89,21 @@ void draw() {
     return;
   }
 
+  // extra guard against index issues
+  if (trialIndex >= trialCount)
+  {
+    userDone = true;
+    if (finishTime == 0)
+      finishTime = millis();
+    return;
+  }
+
   Destination currentTarget = destinations.get(trialIndex);
 
-  // silent success check for live color feedback
-  boolean isSuccess =
-    dist(currentTarget.x, currentTarget.y, logoX, logoY) < inchToPix(.05f) &&
-    calculateDifferenceBetweenAngles(currentTarget.rotation, logoRotation) <= 5 &&
-    abs(currentTarget.z - logoZ) < inchToPix(.1f);
+  boolean positionCorrect = dist(currentTarget.x, currentTarget.y, logoX, logoY)<inchToPix(.05f);
+  boolean rotationCorrect = calculateDifferenceBetweenAngles(currentTarget.rotation, logoRotation)<=5;
+  boolean sizeCorrect = abs(currentTarget.z - logoZ)<inchToPix(.1f);
+  boolean isSuccess = positionCorrect && rotationCorrect && sizeCorrect;
 
   //===========DRAW DESTINATION SQUARES=================
   for (int i=trialIndex; i<trialCount; i++) // reduces over time
@@ -113,7 +121,7 @@ void draw() {
       stroke(128, 128, 128, 128); //set color to semi translucent
     rect(0, 0, d.z, d.z);
 
-    // center marker for destination square
+    // center crosshair for target squares
     if (trialIndex==i) {
       stroke(255, 0, 0, 220);
       strokeWeight(2f);
@@ -143,11 +151,11 @@ void draw() {
   if (isSuccess)
     fill(0, 200, 0, 192); // green when correct
   else
-    fill(60, 60, 192, 192); // original blue when not correct
+    fill(60, 60, 192, 192); // blue otherwise
 
   rect(0, 0, logoZ, logoZ);
 
-  // center marker for user's square
+  // center crosshair for user's square
   stroke(255);
   strokeWeight(2f);
   line(-8, 0, 8, 0);
@@ -158,18 +166,21 @@ void draw() {
 
   popMatrix();
 
-  //===========DRAW NEW CONTROLS=================
+  //===========DRAW CONTROLS=================
   fill(255);
-  scaffoldControlLogic();
+  scaffoldControlLogic(isSuccess);
+
+  //===========DRAW STATUS LABELS=================
+  drawStatusLabels(positionCorrect, rotationCorrect, sizeCorrect);
+
   text("Trial " + (trialIndex+1) + " of " +trialCount, width/2, inchToPix(.8f));
 }
 
-//new control design:
-//-drag square itself to move
-//-drag rotation handle to rotate
-//-drag resize handle to scale
-//-confirmation button to advance
-void scaffoldControlLogic()
+// drag square = move
+// drag R = rotate
+// drag Z = resize
+// submit button only appears when current state is a hit
+void scaffoldControlLogic(boolean isSuccess)
 {
   float handleRadius = inchToPix(.18f);
 
@@ -196,25 +207,60 @@ void scaffoldControlLogic()
   fill(0);
   text("Z", resizeHandle.x, resizeHandle.y + 1);
 
-  // confirmation button
-  float confirmW = inchToPix(1.4f);
-  float confirmH = inchToPix(.6f);
-  float confirmX = width/2;
-  float confirmY = height - inchToPix(.75f);
+  // submit button only when square is correctly matched
+  if (isSuccess)
+  {
+    float submitW = inchToPix(1.4f);
+    float submitH = inchToPix(.6f);
+    float submitX = width/2;
+    float submitY = height - inchToPix(.75f);
 
-  rectMode(CENTER);
-  noStroke();
-  fill(0, 180, 0);
-  rect(confirmX, confirmY, confirmW, confirmH, 10);
+    rectMode(CENTER);
+    noStroke();
+    fill(0, 180, 0);
+    rect(submitX, submitY, submitW, submitH, 10);
 
-  fill(255);
-  textSize(inchToPix(.2f));
-  text("CONFIRM", confirmX, confirmY + 4);
+    fill(255);
+    textSize(inchToPix(.2f));
+    text("SUBMIT", submitX, submitY + 4);
+  }
 
   // instruction label
   fill(255);
   textSize(inchToPix(.18f));
   text("Drag square = move   Drag R = rotate   Drag Z = resize", width/2, height - inchToPix(1.25f));
+}
+
+void drawStatusLabels(boolean positionCorrect, boolean rotationCorrect, boolean sizeCorrect)
+{
+  float panelX = width - inchToPix(1.4f);
+  float y0 = inchToPix(1.8f);
+  float rowGap = inchToPix(.55f);
+  float boxSize = inchToPix(.22f);
+
+  textAlign(LEFT, CENTER);
+  textSize(inchToPix(.2f));
+
+  drawOneStatusLabel(panelX, y0, boxSize, "Position", positionCorrect);
+  drawOneStatusLabel(panelX, y0 + rowGap, boxSize, "Rotation", rotationCorrect);
+  drawOneStatusLabel(panelX, y0 + rowGap*2, boxSize, "Size", sizeCorrect);
+
+  textAlign(CENTER, CENTER);
+}
+
+void drawOneStatusLabel(float x, float y, float boxSize, String label, boolean ok)
+{
+  stroke(255);
+  strokeWeight(1.5f);
+  if (ok)
+    fill(0, 180, 0);
+  else
+    fill(90);
+  rect(x, y, boxSize, boxSize);
+
+  fill(255);
+  noStroke();
+  text(label + ": " + (ok ? "OK" : "NO"), x + inchToPix(.25f), y);
 }
 
 void mousePressed()
@@ -224,6 +270,10 @@ void mousePressed()
     startTime = millis();
     println("time started!");
   }
+
+  // prevent out-of-bounds after experiment is finished
+  if (userDone || trialIndex >= trialCount)
+    return;
 
   float handleRadius = inchToPix(.18f);
   PVector rotateHandle = getRotateHandlePosition();
@@ -257,6 +307,9 @@ void mousePressed()
 
 void mouseDragged()
 {
+  if (userDone || trialIndex >= trialCount)
+    return;
+
   if (draggingLogo)
   {
     logoX = mouseX - dragOffsetX;
@@ -282,23 +335,36 @@ void mouseReleased()
   draggingRotateHandle = false;
   draggingResizeHandle = false;
 
-  // confirmation button click
-  float confirmW = inchToPix(1.4f);
-  float confirmH = inchToPix(.6f);
-  float confirmX = width/2;
-  float confirmY = height - inchToPix(.75f);
+  // prevent out-of-bounds after experiment is finished
+  if (userDone || trialIndex >= trialCount)
+    return;
 
-  if (abs(mouseX - confirmX) < confirmW/2 && abs(mouseY - confirmY) < confirmH/2)
+  // submit button click only when current state is a hit
+  Destination d = destinations.get(trialIndex);  
+  boolean isSuccess =
+    dist(d.x, d.y, logoX, logoY) < inchToPix(.05f) &&
+    calculateDifferenceBetweenAngles(d.rotation, logoRotation) <= 5 &&
+    abs(d.z - logoZ) < inchToPix(.1f);
+
+  if (isSuccess)
   {
-    if (userDone==false && !checkForSuccess())
-      errorCount++;
+    float submitW = inchToPix(1.4f);
+    float submitH = inchToPix(.6f);
+    float submitX = width/2;
+    float submitY = height - inchToPix(.75f);
 
-    trialIndex++; //and move on to next trial
-
-    if (trialIndex==trialCount && userDone==false)
+    if (abs(mouseX - submitX) < submitW/2 && abs(mouseY - submitY) < submitH/2)
     {
-      userDone = true;
-      finishTime = millis();
+      if (userDone==false && !checkForSuccess())
+        errorCount++;
+
+      trialIndex++; //and move on to next trial
+
+      if (trialIndex==trialCount && userDone==false)
+      {
+        userDone = true;
+        finishTime = millis();
+      }
     }
   }
 }
